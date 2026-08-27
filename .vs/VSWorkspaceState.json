@@ -12,6 +12,6 @@
     "\\src\\player",
     "\\src\\raycast"
   ],
-  "SelectedNode": "\\src\\raycast\\Raycaster.hpp",
+  "SelectedNode": "\\CMakeLists.txt",
   "PreviewInSolutionExplorer": false
 }
