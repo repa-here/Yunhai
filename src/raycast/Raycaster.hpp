@@ -2,6 +2,8 @@
 
 #include <SFML/Graphics.hpp>
 
+#include "../maps/TextureLoader/TextureLoader.hpp"
+
 class Raycaster
 {
 public:
@@ -12,4 +14,7 @@ public:
         float playerAngle,
         float playerPitch
     );
+
+private:
+    TextureLoader textures;
 };

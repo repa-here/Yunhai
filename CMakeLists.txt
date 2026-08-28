@@ -20,9 +20,10 @@ file(GLOB_RECURSE SOURCES
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES}
- "interface/main_ui/MainWindow.cpp"
- "src/player/Player.cpp"
- "src/raycast/Raycaster.cpp"
+    "interface/main_ui/MainWindow.cpp"
+    "src/player/Player.cpp"
+    "src/raycast/Raycaster.cpp"
+    "maps/TextureLoader/TextureLoader.cpp"
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -36,4 +37,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     sfml-window 
     sfml-system 
     sfml-audio
+)
+
+add_custom_command(
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/assets"
 )
