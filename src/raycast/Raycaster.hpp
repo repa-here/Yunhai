@@ -17,4 +17,5 @@ public:
 
 private:
     TextureLoader textures;
+    bool renderCeilingToggle = true;
 };

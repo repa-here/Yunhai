@@ -1,5 +1,6 @@
 #include "Raycaster.hpp"
 #include "../maps/map00.hpp"
+#include "ceiling/Ceiling.hpp"
 
 #include <cmath>
 #include <algorithm>
@@ -13,9 +14,7 @@ void Raycaster::render(
 {
     const int screenWidth = 800;
     const int screenHeight = 600;
-
     const float FOV = 1.0472f;
-    const float rayStep = 0.01f;
 
     sf::Texture& wallTexture = textures.getWall();
     sf::Texture& floorTexture = textures.getFloor();
@@ -26,6 +25,22 @@ void Raycaster::render(
     float pitchOffset = playerPitch * 300.0f;
     float horizon = screenHeight / 2.0f + pitchOffset;
 
+    // Render ceiling if enabled.
+    if (renderCeilingToggle)
+    {
+        Ceiling::render(
+            window,
+            playerX,
+            playerY,
+            playerAngle,
+            horizon,
+            screenWidth,
+            screenHeight,
+            FOV,
+            textures.getCeiling()
+        );
+    }
+
     // Store floor pixels.
     sf::VertexArray floor(sf::Points, screenWidth * screenHeight);
     int vertexIndex = 0;
@@ -33,53 +48,104 @@ void Raycaster::render(
     for (int x = 0; x < screenWidth; x++)
     {
         // Calculate ray angle.
-        float cameraX = (2.0f * x / static_cast<float>(screenWidth)) - 1.0f;
+        float cameraX = (2.0f * static_cast<float>(x) / static_cast<float>(screenWidth)) - 1.0f;
         float rayAngle = playerAngle + cameraX * (FOV / 2.0f);
 
-        // Precompute fish-eye correction factor for this ray column
+        // Precompute fish-eye correction factor.
         float cosAngleDiff = std::cos(rayAngle - playerAngle);
-
-        // Ray starts at player.
-        float rayX = playerX;
-        float rayY = playerY;
 
         float rayDirX = std::cos(rayAngle);
         float rayDirY = std::sin(rayAngle);
 
-        float distance = 0.0f;
+        // Current map square player is in.
+        int mapX = static_cast<int>(playerX);
+        int mapY = static_cast<int>(playerY);
 
-        // Move ray until it hits a wall.
+        // Length of ray from one x or y-side to next x or y-side.
+        float deltaDistX = (rayDirX == 0.0f) ? 1e30f : std::abs(1.0f / rayDirX);
+        float deltaDistY = (rayDirY == 0.0f) ? 1e30f : std::abs(1.0f / rayDirY);
+
+        // Length of ray from current position to next x or y-side.
+        float sideDistX;
+        float sideDistY;
+
+        // What direction to step in x or y-direction (either +1 or -1).
+        int stepX;
+        int stepY;
+
+        // Calculate step and initial sideDist.
+        if (rayDirX < 0)
+        {
+            stepX = -1;
+            sideDistX = (playerX - mapX) * deltaDistX;
+        }
+        else
+        {
+            stepX = 1;
+            sideDistX = (mapX + 1.0f - playerX) * deltaDistX;
+        }
+
+        if (rayDirY < 0)
+        {
+            stepY = -1;
+            sideDistY = (playerY - mapY) * deltaDistY;
+        }
+        else
+        {
+            stepY = 1;
+            sideDistY = (mapY + 1.0f - playerY) * deltaDistY;
+        }
+
+        // Perform DDA step loop.
+        int side = 0; // 0 for X-wall, 1 for Y-wall
         while (true)
         {
-            rayX += rayDirX * rayStep;
-            rayY += rayDirY * rayStep;
+            // Jump to next map square, either in x-direction, or in y-direction.
+            if (sideDistX < sideDistY)
+            {
+                sideDistX += deltaDistX;
+                mapX += stepX;
+                side = 0;
+            }
+            else
+            {
+                sideDistY += deltaDistY;
+                mapY += stepY;
+                side = 1;
+            }
 
-            distance += rayStep;
-
-            int mapX = static_cast<int>(rayX);
-            int mapY = static_cast<int>(rayY);
-
-            // Stop if ray leaves the map.
+            // Check if ray left map bounds.
             if (mapX < 0 || mapX >= 10 || mapY < 0 || mapY >= 10)
             {
                 break;
             }
 
-            // Stop when ray hits a wall.
+            // Check if ray hit a wall.
             if (map[mapY][mapX] == 1)
             {
                 break;
             }
         }
 
-        // Prevent division by zero.
-        if (distance < 0.1f)
+        // Calculate perpendicular distance to wall (prevents fisheye automatically).
+        float perpWallDist;
+        if (side == 0)
         {
-            distance = 0.1f;
+            perpWallDist = (sideDistX - deltaDistX);
+        }
+        else
+        {
+            perpWallDist = (sideDistY - deltaDistY);
         }
 
-        // Correct fish-eye distortion for walls
-        float correctedDistance = distance * cosAngleDiff;
+        // Prevent division by zero.
+        if (perpWallDist < 0.1f)
+        {
+            perpWallDist = 0.1f;
+        }
+
+        // Correct fish-eye distance for walls.
+        float correctedDistance = perpWallDist * cosAngleDiff;
 
         // Calculate wall height.
         float wallHeight = screenHeight / correctedDistance;
@@ -88,27 +154,29 @@ void Raycaster::render(
         float wallTop = horizon - wallHeight / 2.0f;
         float wallBottom = horizon + wallHeight / 2.0f;
 
-        // Find where the ray hit the wall.
-        float xFraction = rayX - std::floor(rayX);
-        float yFraction = rayY - std::floor(rayY);
-
+        // Calculate exact wall collision point (X coordinate).
         float wallX;
-        if (xFraction < 0.05f || xFraction > 0.95f)
+        if (side == 0)
         {
-            wallX = yFraction;
+            wallX = playerY + perpWallDist * rayDirY;
         }
         else
         {
-            wallX = xFraction;
+            wallX = playerX + perpWallDist * rayDirX;
         }
+        wallX -= std::floor(wallX);
 
         // Convert wall position to texture X.
-        int textureX = static_cast<int>(wallX * wallTexture.getSize().x);
-        textureX = std::clamp(
-            textureX,
-            0,
-            static_cast<int>(wallTexture.getSize().x - 1)
-        );
+        int textureX = static_cast<int>(wallX * static_cast<float>(wallTexture.getSize().x));
+
+        // Flip texture coordinate for opposite sides.
+        if ((side == 0 && rayDirX < 0) || (side == 1 && rayDirY > 0))
+        {
+            textureX = static_cast<int>(wallTexture.getSize().x) - textureX - 1;
+        }
+
+        int maxTexX = std::max(0, static_cast<int>(wallTexture.getSize().x) - 1);
+        textureX = std::clamp(textureX, 0, maxTexX);
 
         // Draw wall texture.
         sf::Sprite wall(wallTexture);
@@ -121,7 +189,7 @@ void Raycaster::render(
 
         wall.setScale(
             1.0f,
-            wallHeight / wallTexture.getSize().y
+            wallHeight / static_cast<float>(wallTexture.getSize().y)
         );
 
         wall.setPosition(
@@ -153,7 +221,7 @@ void Raycaster::render(
                 continue;
             }
 
-            // Correct floor fish-eye distortion using cosAngleDiff
+            // Correct floor fish-eye distortion using cosAngleDiff.
             float floorDistance = (screenHeight / (2.0f * row)) / cosAngleDiff;
 
             // Prevent extremely large distances.

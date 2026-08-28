@@ -24,6 +24,7 @@ add_executable(${PROJECT_NAME} ${SOURCES}
     "src/player/Player.cpp"
     "src/raycast/Raycaster.cpp"
     "maps/TextureLoader/TextureLoader.cpp"
+    "src/raycast/ceiling/Ceiling.cpp"
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE

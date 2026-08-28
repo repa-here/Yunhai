@@ -10,9 +10,11 @@ public:
 
 	sf::Texture& getWall();
 	sf::Texture& getFloor();
+	sf::Texture& getCeiling();
 
 private:
 	// Texture Variables
 	sf::Texture wallTexture;
 	sf::Texture floorTexture;
+	sf::Texture ceilingTexture;
 };
