@@ -15,22 +15,20 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(SFML)
 
 file(GLOB_RECURSE SOURCES 
+    "interface/*.cpp"
     "src/*.cpp"
+    "maps/*.cpp"
     "maps/*.hpp"
 )
 
-add_executable(${PROJECT_NAME} ${SOURCES}
-    "interface/main_ui/MainWindow.cpp"
-    "src/player/Player.cpp"
-    "src/raycast/Raycaster.cpp"
-    "maps/TextureLoader/TextureLoader.cpp"
-    "src/raycast/ceiling/Ceiling.cpp"
-)
+add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/interface
     ${CMAKE_CURRENT_SOURCE_DIR}/maps
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/player
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/object
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE 

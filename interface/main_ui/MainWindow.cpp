@@ -3,11 +3,17 @@
 #include "MainWindow.hpp"
 #include "../player/Player.hpp"
 #include "../raycast/Raycaster.hpp"
+#include "../object/gameobjects/Barrel.hpp"
 
 void MainWindow()
 {
     Player player;
     Raycaster raycaster;
+    Barrel barrel;
+
+    barrel.posX = 3.5f;
+    barrel.posY = 2.5f;
+    barrel.scale = 1.0f;
 
     sf::RenderWindow window(
         sf::VideoMode(800, 600),
@@ -75,6 +81,15 @@ void MainWindow()
 
         // Render the 3D world.
         raycaster.render(
+            window,
+            player.posX,
+            player.posY,
+            player.angle,
+            player.pitch
+        );
+
+        // Render the testing barrel.
+        barrel.render(
             window,
             player.posX,
             player.posY,

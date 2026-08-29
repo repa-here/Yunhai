@@ -12,7 +12,7 @@ struct Player
 	float pitch = 0.0f;
 	float mouseSensitivity = 0.003f;
 
-	float speed = 0.020f;
+	float speed = 0.030f;
 
 	// Calling the functions from Player.cpp
 	void movement_update();
